@@ -1,12 +1,35 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { FaUserCircle, FaBars, FaTimes } from "react-icons/fa";
+import { FaUserCircle, FaBars, FaTimes, FaMapMarkerAlt } from "react-icons/fa";
 
-export default function NavBar() {
+export default function NavBar({ locationInfo }) {
   const { user, login, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const getLocationDisplay = () => {
+    if (!locationInfo) return null;
+    
+    const { name, type } = locationInfo;
+    let icon = "📍";
+    let text = name;
+    
+    if (type === 'precise') {
+      icon = "📍";
+      text = name;
+    } else if (type === 'estimated') {
+      icon = "🌍";
+      text = `${name} (estimated)`;
+    } else {
+      icon = "🌍";
+      text = name;
+    }
+    
+    return { icon, text };
+  };
+
+  const locationDisplay = getLocationDisplay();
 
   return (
     <nav className="sticky top-0 z-50 bg-white shadow">
@@ -17,6 +40,14 @@ export default function NavBar() {
             <span className="text-2xl lg:text-3xl" aria-label="AccessMap logo">🗺️</span>
             <span className="text-xl lg:text-2xl font-bold text-blue-700">AccessMap</span>
           </div>
+
+          {/* Location Display - Center */}
+          {locationDisplay && (
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-lg border border-blue-200">
+              <span className="text-lg">{locationDisplay.icon}</span>
+              <span className="text-sm font-medium text-blue-800">{locationDisplay.text}</span>
+            </div>
+          )}
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-6">
@@ -62,6 +93,14 @@ export default function NavBar() {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="lg:hidden mt-4 pb-4 border-t pt-4">
+            {/* Mobile Location Display */}
+            {locationDisplay && (
+              <div className="flex items-center gap-2 mb-4 px-2 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                <span className="text-lg">{locationDisplay.icon}</span>
+                <span className="text-sm font-medium text-blue-800">{locationDisplay.text}</span>
+              </div>
+            )}
+            
             <ul className="flex flex-col gap-4 text-lg">
               <li><a href="#" className="block hover:underline">Home</a></li>
               <li><a href="#" className="block hover:underline">About</a></li>

@@ -43,12 +43,37 @@ const createCustomIcon = (type) => {
   });
 };
 
-export default function AccessibleMap() {
+// Function to get location name from coordinates
+const getLocationName = async (lat, lng) => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`
+    );
+    if (response.ok) {
+      const data = await response.json();
+      if (data.address) {
+        // Try to get city name, fallback to other location names
+        const city = data.address.city || 
+                    data.address.town || 
+                    data.address.village || 
+                    data.address.county ||
+                    data.address.state;
+        return city || data.display_name.split(',')[0];
+      }
+    }
+  } catch (error) {
+    console.log('Reverse geocoding failed:', error.message);
+  }
+  return null;
+};
+
+export default function AccessibleMap({ onLocationDetected }) {
   const { places, filters } = usePlaces();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
 
   // Filter places based on selected filters
   const filteredPlaces = places.filter((place) => {
@@ -59,6 +84,68 @@ export default function AccessibleMap() {
     if (activeFilters.length === 0) return true;
     return activeFilters.every((filter) => place.accessibilityType.includes(filter));
   });
+
+  // Hybrid geolocation function
+  const detectUserLocation = async () => {
+    // Try browser geolocation first (most accurate)
+    if (navigator.geolocation) {
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 300000 // 5 minutes
+          });
+        });
+
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        
+        // Get location name
+        const name = await getLocationName(latitude, longitude);
+        const locationName = name || 'Your Location';
+        
+        // Pass location info to parent component
+        if (onLocationDetected) {
+          onLocationDetected({ lat: latitude, lng: longitude, name: locationName, type: 'precise' });
+        }
+        
+        return { lat: latitude, lng: longitude };
+      } catch (error) {
+        console.log('Browser geolocation failed:', error.message);
+        // Continue to IP geolocation fallback
+      }
+    }
+
+    // Fallback to IP geolocation
+    try {
+      const response = await fetch('https://ipapi.co/json/');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.latitude && data.longitude) {
+          setUserLocation({ lat: data.latitude, lng: data.longitude });
+          
+          // Get location name from IP geolocation data
+          const locationName = data.city || data.region || data.country_name || 'Estimated Location';
+          
+          // Pass location info to parent component
+          if (onLocationDetected) {
+            onLocationDetected({ lat: data.latitude, lng: data.longitude, name: locationName, type: 'estimated' });
+          }
+          
+          return { lat: data.latitude, lng: data.longitude };
+        }
+      }
+    } catch (error) {
+      console.log('IP geolocation failed:', error.message);
+    }
+
+    // Default to India center
+    if (onLocationDetected) {
+      onLocationDetected({ lat: 22.9734, lng: 78.6569, name: 'India', type: 'default' });
+    }
+    return { lat: 22.9734, lng: 78.6569 };
+  };
 
   useEffect(() => {
     // Dynamically import Leaflet to avoid SSR issues
@@ -82,13 +169,13 @@ export default function AccessibleMap() {
     // Initialize map
     const map = L.map(mapRef.current, {
       center: [22.9734, 78.6569], // Center of India
-      zoom: 5,
+      zoom: 20, // Increased from 5 to 8 (2x more zoomed in)
       zoomControl: true,
       attributionControl: true,
       // Accessibility options
       keyboard: true,
       keyboardPanDelta: 80,
-      keyboardZoomDelta: 1,
+      keyboardZoomDelta: 2, // Increased from 1 to 2 (2x zoom increment)
     });
 
     // Add OpenStreetMap tiles (free and accessible)
@@ -122,6 +209,15 @@ export default function AccessibleMap() {
       return div;
     };
     keyboardInfo.addTo(map);
+
+    // Detect user location and update map
+    detectUserLocation().then((location) => {
+      if (mapInstanceRef.current) {
+        // Zoom to user location with appropriate zoom level
+        const zoomLevel = userLocation ? 15 : 8; // Closer zoom if location found
+        mapInstanceRef.current.setView([location.lat, location.lng], zoomLevel);
+      }
+    });
 
     return () => {
       if (mapInstanceRef.current) {
@@ -207,13 +303,20 @@ export default function AccessibleMap() {
       markersRef.current.push(marker);
     });
 
-    // Fit map to show all markers if there are any
+    // Fit map to show all markers if there are any, but prioritize user location
     if (filteredPlaces.length > 0) {
       const group = new L.featureGroup(markersRef.current);
-      map.fitBounds(group.getBounds().pad(0.1));
+      const bounds = group.getBounds();
+      
+      // If user location is available, include it in bounds
+      if (userLocation) {
+        bounds.extend([userLocation.lat, userLocation.lng]);
+      }
+      
+      map.fitBounds(bounds.pad(0.1));
     }
 
-  }, [filteredPlaces, L]);
+  }, [filteredPlaces, L, userLocation]);
 
   // Add global function for popup button clicks
   useEffect(() => {
