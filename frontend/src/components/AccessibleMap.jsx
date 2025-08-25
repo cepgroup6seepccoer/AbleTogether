@@ -332,6 +332,7 @@ export default function AccessibleMap({ onLocationDetected }) {
       [southCoordinate, westCoordinate],
       [northCoordinate, eastCoordinate]
     ];
+    console.log(bounds+"Bounding Box Changed")
 
     mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
   }, [boundBox, L]);
