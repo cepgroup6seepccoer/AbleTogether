@@ -12,7 +12,7 @@ const filtersList = [
 ];
 
 export default function FilterSidebar() {
-  const { filters, setFilters } = usePlaces();
+  const { filters, setFilters, setBoundBox } = usePlaces();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleChange = (e) => {
@@ -24,9 +24,24 @@ export default function FilterSidebar() {
     setFilters((prev) => ({ ...prev, area: e.target.value }));
   };
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
     // Implement area search logic
+    if (!filters.area?.trim()) return;
+
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(filters.area)}&format=json&limit=1`)
+    const data = await res.json()
+    const locationData = data?.[0]
+    if (!locationData?.boundingbox) return;
+
+    const [south, north, west, east] = locationData.boundingbox
+
+    setBoundBox({
+      southCoordinate: parseFloat(south),
+      northCoordinate: parseFloat(north),
+      westCoordinate: parseFloat(west),
+      eastCoordinate: parseFloat(east),
+    })
   };
 
   return (

@@ -35,9 +35,14 @@ export function PlacesProvider({ children }) {
     area: "",
     onlyMine: false,
   });
-
+  const [boundBox, setBoundBox] = useState({
+    southCoordinate: 0,
+    northCoordinate: 0,
+    westCoordinate: 0,
+    eastCoordinate: 0,
+  });
   return (
-    <PlacesContext.Provider value={{ places, setPlaces, filters, setFilters }}>
+    <PlacesContext.Provider value={{ places, setPlaces, filters, setFilters, boundBox, setBoundBox }}>
       {children}
     </PlacesContext.Provider>
   );

@@ -68,7 +68,7 @@ const getLocationName = async (lat, lng) => {
 };
 
 export default function AccessibleMap({ onLocationDetected }) {
-  const { places, filters } = usePlaces();
+  const { places, filters, boundBox } = usePlaces();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -169,7 +169,7 @@ export default function AccessibleMap({ onLocationDetected }) {
     // Initialize map
     const map = L.map(mapRef.current, {
       center: [22.9734, 78.6569], // Center of India
-      zoom: 20, // Increased from 5 to 8 (2x more zoomed in)
+      zoom: 100, // Increased from 5 to 8 (2x more zoomed in)
       zoomControl: true,
       attributionControl: true,
       // Accessibility options
@@ -318,6 +318,24 @@ export default function AccessibleMap({ onLocationDetected }) {
 
   }, [filteredPlaces, L, userLocation]);
 
+  // Fit to boundBox changes from context (from search)
+  useEffect(() => {
+    if (!L || !mapInstanceRef.current) return;
+    if (!boundBox) return;
+
+    const { southCoordinate, northCoordinate, westCoordinate, eastCoordinate } = boundBox;
+
+    const nums = [southCoordinate, northCoordinate, westCoordinate, eastCoordinate].map(Number);
+    if (nums.some(n => Number.isNaN(n))) return;
+
+    const bounds = [
+      [southCoordinate, westCoordinate],
+      [northCoordinate, eastCoordinate]
+    ];
+
+    mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+  }, [boundBox, L]);
+
   // Add global function for popup button clicks
   useEffect(() => {
     window.viewDetails = (placeId) => {
@@ -358,27 +376,12 @@ export default function AccessibleMap({ onLocationDetected }) {
           background: transparent !important;
           border: none !important;
         }
-        
         .custom-popup .leaflet-popup-content-wrapper {
           border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          padding: 0;
         }
-        
         .custom-popup .leaflet-popup-content {
           margin: 0;
-          line-height: 1.4;
-        }
-        
-        .map-tiles {
-          filter: contrast(1.1) brightness(1.05);
-        }
-        
-        .keyboard-info {
-          pointer-events: none;
-        }
-        
-        .keyboard-info > div {
-          pointer-events: auto;
         }
       `}</style>
     </div>

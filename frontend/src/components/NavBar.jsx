@@ -37,8 +37,10 @@ export default function NavBar({ locationInfo }) {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <span className="text-2xl lg:text-3xl" aria-label="AccessMap logo">🗺️</span>
-            <span className="text-xl lg:text-2xl font-bold text-blue-700">AccessMap</span>
+            <span className="text-2xl lg:text-3xl" aria-label="AbleTogether logo">
+              <img src="https://res.cloudinary.com/dudvtmjbh/image/upload/v1753856557/Your_paragraph_text-removebg-preview_otqpqe.png" alt="AbleTogether logo" className="w-10 h-10" />
+            </span>
+            <span className="text-xl lg:text-2xl font-bold text-blue-700">AbleTogether</span>
           </div>
 
           {/* Location Display - Center */}
