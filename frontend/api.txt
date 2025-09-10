@@ -1,0 +1,8 @@
+1.API to get the bound box for the user requested area 
+
+https://nominatim.openstreetmap.org/search?q=Pune+Haveli+India&format=json&limit=1
+lick the Headers tab → click + Add Header
+
+    Key: User-Agent
+
+    Value: AccessMap/1.0
